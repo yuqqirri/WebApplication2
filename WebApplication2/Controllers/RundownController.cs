@@ -1,10 +1,12 @@
 ﻿// Controllers/RundownController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication2.Data;
 using WebApplication2.Models;
 
 namespace WebApplication2.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class RundownController : ControllerBase

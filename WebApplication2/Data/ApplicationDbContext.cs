@@ -13,6 +13,7 @@ namespace WebApplication2.Data
 
         public DbSet<Currency> Currencies { get; set; }
         public DbSet<Rundown> Rundowns { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
