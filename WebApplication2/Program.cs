@@ -5,25 +5,42 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using WebApplication2;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Настройка аутентификации
-builder.Services.AddAuthentication("BasicAuthentication")
-    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+// Настройка JWT аутентификации
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
 
-// Настройка Swagger
+// Настройка Swagger для JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
 
-    c.AddSecurityDefinition("basic", new OpenApiSecurityScheme
+    // Добавляем поддержку JWT в Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
+        Description = "JWT Авторизация",
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "basic",
         In = ParameterLocation.Header,
-        Description = "Basic Authentication header using username and password"
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -34,13 +51,14 @@ builder.Services.AddSwaggerGen(c =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = "basic"
+                    Id = "Bearer"
                 }
             },
             Array.Empty<string>()
         }
     });
 });
+
 
 // Логирование
 builder.Logging.AddConsole();
