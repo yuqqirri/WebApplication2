@@ -7,6 +7,9 @@ using System.Text;
 using WebApplication2.Data;
 using Microsoft.Extensions.Configuration;
 using WebApplication2.Models;
+using WebApplication2.Services;
+using Microsoft.AspNetCore.Identity.Data;
+using WebApplication2.Models.Response;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -14,22 +17,26 @@ public class AuthController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly AuthService _authService;
 
-    public AuthController(ApplicationDbContext context, IConfiguration configuration)
+    public AuthController(ApplicationDbContext context, IConfiguration configuration, AuthService authService)
     {
         _context = context;
         _configuration = configuration;
+        _authService = authService;
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginModel model)
+    public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginModel model)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Username == model.Username);
-        if (user == null || !VerifyPassword(model.Password, user.PasswordHash))
-            return Unauthorized("Неверное имя пользователя или пароль");
+        var token = await _authService.LoginAsync(model);
 
-        var token = GenerateJwtToken(user);
-        return Ok(new { Token = token });
+        if (token.Token.IsNullOrEmpty())
+        {
+            return Unauthorized("Неверный логин или пароль");
+        }
+
+        return Ok(token);
     }
 
     [HttpPost("register")]

@@ -10,4 +10,9 @@ public class UserRepository(ApplicationDbContext context)
     {
         return await context.Users.ToListAsync();
     }
+
+    public async Task<User> GetUser(LoginModel loginModel)
+    {
+        return await context.Users.Where(x => x.Username == loginModel.Username).FirstOrDefaultAsync();
+    }
 }

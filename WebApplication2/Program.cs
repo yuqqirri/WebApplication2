@@ -8,6 +8,7 @@ using WebApplication2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using WebApplication2.Repositories;
+using WebApplication2.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,7 +70,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // HttpClient
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<BankRuClient>();
 
 // Регистрация фонового сервиса
 builder.Services.AddHostedService<CurrencyRateService>();
