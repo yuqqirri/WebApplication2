@@ -10,6 +10,7 @@ using WebApplication2.Data;
 using WebApplication2.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using WebApplication2.Repositories;
 
 namespace WebApplication2.Services
 {
@@ -18,35 +19,39 @@ namespace WebApplication2.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<CurrencyRateService> _logger;
+        private readonly ApplicationDbContext dbContext;
+        private readonly UserRepository _userRepository;
 
         public CurrencyRateService(
             IServiceScopeFactory scopeFactory,
             IHttpClientFactory httpClientFactory,
-            ILogger<CurrencyRateService> logger)
+            ILogger<CurrencyRateService> logger,
+            ApplicationDbContext context,
+            UserRepository userRepository)
         {
             _scopeFactory = scopeFactory;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            dbContext = context;
+            _userRepository = userRepository;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var users = await _userRepository.GetAllUsersAsync();
+
             _logger.LogInformation("Сервис обновления курсов валют запущен");
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                using (var scope = _scopeFactory.CreateScope())
-                {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    await FetchCurrencyRatesAsync(dbContext, stoppingToken);
-                }
+                await FetchCurrencyRatesAsync(stoppingToken);
 
                 // Обновляем каждый 1 час
                 await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
             }
         }
 
-        private async Task FetchCurrencyRatesAsync(ApplicationDbContext dbContext, CancellationToken ct)
+        private async Task FetchCurrencyRatesAsync(CancellationToken ct)
         {
             var client = _httpClientFactory.CreateClient();
             const string url = "https://www.cbr-xml-daily.ru/daily_json.js";
@@ -56,8 +61,8 @@ namespace WebApplication2.Services
                 var response = await client.GetStringAsync(url, ct);
                 var currencyData = JsonConvert.DeserializeObject<CurrencyData>(response);
 
-                await ProcessCurrenciesAsync(dbContext, currencyData.Valute, ct);
-                await ProcessRundownsAsync(dbContext, currencyData, ct);
+                await ProcessCurrenciesAsync(currencyData.Valute, ct);
+                await ProcessRundownsAsync(currencyData, ct);
 
                 // Русское сообщение с временем из API
                 _logger.LogInformation("Сводка обновлена (актуальность данных: {DataTime})",
@@ -74,7 +79,6 @@ namespace WebApplication2.Services
         }
 
         private async Task ProcessCurrenciesAsync(
-            ApplicationDbContext dbContext,
             Dictionary<string, CurrencyInfo> valute,
             CancellationToken ct)
         {
@@ -95,7 +99,6 @@ namespace WebApplication2.Services
         }
 
         private async Task ProcessRundownsAsync(
-            ApplicationDbContext dbContext,
             CurrencyData currencyData,
             CancellationToken ct)
         {

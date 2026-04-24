@@ -7,6 +7,7 @@ using System.Text;
 using WebApplication2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using WebApplication2.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +73,8 @@ builder.Services.AddHttpClient();
 
 // Регистрация фонового сервиса
 builder.Services.AddHostedService<CurrencyRateService>();
+
+builder.Services.AddScoped<UserRepository>();
 
 // Сервисы
 builder.Services.AddControllers();
