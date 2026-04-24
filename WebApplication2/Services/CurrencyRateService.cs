@@ -110,7 +110,7 @@ namespace WebApplication2.Services
                     var currencyInfo = kvp.Value;
                     return new Rundown
                     {
-                        Rundown_date = currencyData.Date,
+                        Rundown_date = currencyData.Date.ToUniversalTime(),
                         Rundown_value = currencyInfo.Value / currencyInfo.Nominal,
                         Currency_id = currencies[kvp.Key].Currency_id
                     };
