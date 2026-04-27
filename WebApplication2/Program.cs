@@ -1,18 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
-using WebApplication2.Data;
-using WebApplication2.Services;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.OpenApi.Models;
-using System.Text;
-using WebApplication2;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using Quartz;
+using System.Text;
+using WebApplication2.Data;
 using WebApplication2.Repositories;
-using WebApplication2.Clients;
+using WebApplication2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Настройка JWT аутентификации
+// 1. Настройка JWT аутентификации
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -24,20 +22,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
+            // Добавили ! после ["Jwt:Key"]
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
 
-// Настройка Swagger для JWT
+// 2. Регистрация сервисов и репозиториев
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<UserRepository>(); // Твой репозиторий для Auth
+
+// 3. Настройка Swagger для JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
 
-    // Добавляем поддержку JWT в Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Авторизация",
+        Description = "JWT Авторизация. Введите 'Bearer {токен}'",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
@@ -61,38 +63,52 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
-// Логирование
+// 4. Логирование и БД
 builder.Logging.AddConsole();
-
-// Контекст БД
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// HttpClient
-builder.Services.AddHttpClient<BankRuClient>();
+// 5. HttpClient (для Quartz)
+builder.Services.AddHttpClient();
 
-// Регистрация фонового сервиса
-builder.Services.AddHostedService<CurrencyRateService>();
+// 6. Настройка Quartz.NET
+builder.Services.AddQuartz(q =>
+{
+    var jobKey = new JobKey("CurrencyUpdateJob");
+    q.AddJob<CurrencyUpdateJob>(opts => opts.WithIdentity(jobKey));
 
-builder.Services.AddScoped<UserRepository>();
+    q.AddTrigger(opts => opts
+        .ForJob(jobKey)
+        .WithIdentity("CurrencyUpdateJob-trigger")
+        .WithSimpleSchedule(x => x
+            .WithIntervalInHours(1) // Обновление раз в час
+            .RepeatForever()));
+});
 
-// Сервисы
+// Добавляем Quartz как фоновую службу
+builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+
+// 7. Контроллеры
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Настройка Pipeline (Middlewares)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
+
+app.UseAuthentication(); // Сначала КТО ты
+app.UseAuthorization();  // Потом ЧТО тебе можно
 
 app.MapControllers();
 
-// Автоматическое применение миграций при запуске
+// Автоматическое применение миграций при старте (удобно для разработки)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

@@ -4,66 +4,84 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using WebApplication2.Data;
 using WebApplication2.Models;
-using WebApplication2.Models.Response;
-using WebApplication2.Repositories;
+using WebApplication2.Models.DTO;
 
-namespace WebApplication2.Services;
-
-public class AuthService(UserRepository userRepository, IConfiguration _configuration)
+namespace WebApplication2.Services
 {
-    public async Task<LoginResponse> LoginAsync(LoginModel model)
+    public interface IAuthService
     {
-        var user = await userRepository.GetUser(model);
+        Task<AuthResponse?> LoginAsync(LoginRequest request);
+        Task<bool> RegisterAsync(RegisterRequest request);
+    }
 
-        if (user == null || !VerifyPassword(model.Password, user.PasswordHash))
-            return new LoginResponse();
+    public class AuthService : IAuthService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        var token = GenerateJwtToken(user);
-
-        var loginResponse = new LoginResponse
+        public AuthService(ApplicationDbContext context, IConfiguration configuration)
         {
-            Token = token
-        };
+            _context = context;
+            _configuration = configuration;
+        }
 
-        return loginResponse;
-    }
-
-    private string GenerateJwtToken(User user)
-    {
-        var securityKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-
-        var credentials = new SigningCredentials(
-            securityKey, SecurityAlgorithms.HmacSha256);
-
-        var claims = new[]
+        public async Task<AuthResponse?> LoginAsync(LoginRequest request)
         {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(JwtRegisteredClaimNames.Sub, user.Username),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+            if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
+                return null;
 
-        var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: credentials);
+            var token = GenerateJwtToken(user);
+            return new AuthResponse(token, user.Username);
+        }
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
+        public async Task<bool> RegisterAsync(RegisterRequest request)
+        {
+            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+                return false;
 
-    private bool VerifyPassword(string password, string storedHash)
-    {
-        string hashedInput = HashPassword(password);
-        return hashedInput == storedHash;
-    }
+            var user = new User
+            {
+                Username = request.Username,
+                PasswordHash = HashPassword(request.Password)
+            };
 
-    private string HashPassword(string password)
-    {
-        using var sha256 = SHA256.Create();
-        byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // --- Вспомогательные методы (логика) ---
+
+        private string GenerateJwtToken(User user)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[] {
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
+                expires: DateTime.Now.AddHours(1),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private static string HashPassword(string password)
+        {
+            var bytes = Encoding.UTF8.GetBytes(password);
+            var hash = System.Security.Cryptography.SHA256.HashData(bytes);
+            return Convert.ToBase64String(hash);
+        }
+
+        private bool VerifyPassword(string password, string storedHash) => HashPassword(password) == storedHash;
     }
 }
