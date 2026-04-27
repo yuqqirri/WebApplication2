@@ -11,7 +11,7 @@ namespace WebApplication2.Controllers
     [Route("api/[controller]")]
     public class CurrencyController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context; // вынести в отдельный репозиторий Currency
 
         public CurrencyController(ApplicationDbContext context)
         {

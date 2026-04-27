@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest model)
     {
         var result = await _authService.RegisterAsync(model);
-        if (!result) return BadRequest("Пользователь уже существует");
+        if (result is false) return BadRequest("Пользователь уже существует");
         return Ok("Регистрация успешна");
     }
 }

@@ -11,7 +11,7 @@ namespace WebApplication2.Controllers
     [Route("api/[controller]")]
     public class RundownController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context; // Вынести в отдельный репозиторий
 
         public RundownController(ApplicationDbContext context)
         {
