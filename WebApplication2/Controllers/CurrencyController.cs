@@ -1,8 +1,8 @@
 ﻿// Controllers/CurrencyController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WebApplication2.Data;
-using WebApplication2.Models;
+using WebApplication2.Domain.Models;
+using WebApplication2.Infrastructure.Data;
 
 namespace WebApplication2.Controllers
 {

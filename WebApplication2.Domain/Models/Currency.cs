@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace WebApplication2.Models
+namespace WebApplication2.Domain.Models
 {
     [Index(nameof(Currency_name), IsUnique = true)]
     public class Currency

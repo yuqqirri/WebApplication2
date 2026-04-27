@@ -1,4 +1,4 @@
-﻿namespace WebApplication2.Models.Response;
+﻿namespace WebApplication2.Domain.Models.Response;
 
 public class LoginResponse
 {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebApplication2.Models.DTO;
+using WebApplication2.Domain.Interfaces;
+using WebApplication2.Domain.Models.DTO;
 using WebApplication2.Services;
 
 [ApiController]

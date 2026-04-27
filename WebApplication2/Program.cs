@@ -4,9 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Quartz;
 using System.Text;
-using WebApplication2.Data;
-using WebApplication2.Repositories;
-using WebApplication2.Services;
+using WebApplication2.Domain.Interfaces;
+using WebApplication2.Infrastructure.Data;
+using WebApplication2.Infrastructure.Repositories;
+using WebApplication2.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

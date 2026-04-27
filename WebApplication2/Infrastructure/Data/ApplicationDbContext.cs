@@ -1,8 +1,8 @@
 // Data/ApplicationDbContext.cs
 using Microsoft.EntityFrameworkCore;
-using WebApplication2.Models;
+using WebApplication2.Domain.Models;
 
-namespace WebApplication2.Data
+namespace WebApplication2.Infrastructure.Data
 {
     public class ApplicationDbContext : DbContext
     {

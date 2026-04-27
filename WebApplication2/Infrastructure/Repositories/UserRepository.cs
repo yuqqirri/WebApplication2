@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using WebApplication2.Data;
-using WebApplication2.Models;
+using WebApplication2.Domain.Models;
+using WebApplication2.Infrastructure.Data;
 
-namespace WebApplication2.Repositories;
+namespace WebApplication2.Infrastructure.Repositories;
 
 public class UserRepository(ApplicationDbContext context)
 {

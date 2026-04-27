@@ -4,21 +4,16 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using WebApplication2.Data;
-using WebApplication2.Models;
-using WebApplication2.Models.DTO;
+using WebApplication2.Domain.Interfaces;
+using WebApplication2.Domain.Models;
+using WebApplication2.Domain.Models.DTO;
+using WebApplication2.Infrastructure.Data;
 
-namespace WebApplication2.Services
+namespace WebApplication2.Infrastructure.Services
 {
-    public interface IAuthService
-    {
-        Task<AuthResponse?> LoginAsync(LoginRequest request);
-        Task<bool> RegisterAsync(RegisterRequest request);
-    }
-
     public class AuthService : IAuthService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _context; // вынести в отдельный репозиторий Auth
         private readonly IConfiguration _configuration;
 
         public AuthService(ApplicationDbContext context, IConfiguration configuration)

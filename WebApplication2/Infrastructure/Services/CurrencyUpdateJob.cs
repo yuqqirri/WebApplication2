@@ -1,16 +1,17 @@
 ﻿using Quartz;
-using WebApplication2.Data;
 using WebApplication2.Models;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using WebApplication2.Infrastructure.Data;
+using WebApplication2.Domain.Models;
 
-namespace WebApplication2.Services; // Убрали лишние скобки { } для всего файла
+namespace WebApplication2.Infrastructure.Services; // Убрали лишние скобки { } для всего файла
 
 [DisallowConcurrentExecution]
 // Вот так выглядит основной конструктор. Мы объявляем зависимости прямо возле имени класса!
 public class CurrencyUpdateJob(
-    ApplicationDbContext dbContext,
-    IHttpClientFactory httpClientFactory,
+    ApplicationDbContext dbContext, // Вынести в отдельный репозиторий Currency
+    IHttpClientFactory httpClientFactory, // Вынести в отдельный клиент BankRuClient
     ILogger<CurrencyUpdateJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
@@ -80,7 +81,7 @@ public class CurrencyUpdateJob(
     }
 }
 
-// А ВОТ И НАШИ ПОТЕРЯННЫЕ КЛАССЫ!
+// Вынести в Models
 public class CurrencyData
 {
     public DateTime Date { get; set; }
