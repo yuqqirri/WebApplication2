@@ -5,6 +5,6 @@ namespace WebApplication2.Domain.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResponse?> LoginAsync(LoginModel request);
-    Task<bool> RegisterAsync(RegisterModel request);
+    Task<AuthResponse?> LoginAsync(LoginModel request); // Логика входа + JWT
+    Task<bool> RegisterAsync(RegisterModel request);    // Логика регистрации
 }

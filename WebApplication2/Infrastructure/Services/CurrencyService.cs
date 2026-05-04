@@ -26,4 +26,24 @@ public class CurrencyService(
             logger.LogInformation("Добавлено {Count} новых валют", newCurrencies.Count);
         }
     }
+
+    public async Task<Currency> CreateCurrencyAsync(Currency currency)
+    {
+        await repository.AddSingleCurrencyAsync(currency);
+        await repository.SaveChangesAsync();
+        return currency;
+    }
+
+    public async Task<Currency?> GetCurrencyAsync(int id)
+        => await repository.GetCurrencyByIdAsync(id);
+
+    public async Task<Rundown> CreateRundownAsync(Rundown rundown)
+    {
+        await repository.AddRundownAsync(rundown);
+        await repository.SaveChangesAsync();
+        return rundown;
+    }
+
+    public async Task<Rundown?> GetRundownAsync(int id)
+        => await repository.GetRundownByIdAsync(id);
 }

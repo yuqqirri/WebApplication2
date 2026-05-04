@@ -9,9 +9,3 @@ public interface IUserRepository
     Task AddUserAsync(User user);
     Task SaveChangesAsync();
 }
-
-public interface ICurrencyRepository
-{
-    Task AddCurrenciesAsync(List<Currency> currencies, CancellationToken ct);
-    Task<List<string>> GetExistingCurrencyNamesAsync(CancellationToken ct);
-}
