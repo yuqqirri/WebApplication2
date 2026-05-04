@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using WebApplication2.Domain.Interfaces;
 using WebApplication2.Domain.Models.DTO;
-using WebApplication2.Services;
+using WebApplication2.Infrastructure.Services;
 
 [ApiController]
 [Route("api/[controller]")]

@@ -1,5 +1,4 @@
 ﻿using Quartz;
-using WebApplication2.Models;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using WebApplication2.Infrastructure.Data;
