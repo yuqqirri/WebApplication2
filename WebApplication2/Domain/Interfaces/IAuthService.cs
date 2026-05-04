@@ -1,14 +1,10 @@
-﻿using WebApplication2.Domain.Models;
-using WebApplication2.Domain.Models.DTO;
+﻿using WebApplication2.Domain.Models.DTO;
+using WebApplication2.Domain.Models.Response;
 
-namespace WebApplication2.Domain.Interfaces
+namespace WebApplication2.Domain.Interfaces;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        // Метод для регистрации. Возвращает объект пользователя или ошибку.
-        Task<bool> RegisterAsync(RegisterRequest request);
-
-        // Метод для входа. Возвращает готовый JWT-токен, если данные верны.
-        Task<AuthResponse?> LoginAsync(LoginRequest request);
-    }
+    Task<AuthResponse?> LoginAsync(LoginModel request);
+    Task<bool> RegisterAsync(RegisterModel request);
 }

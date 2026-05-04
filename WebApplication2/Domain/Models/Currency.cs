@@ -6,9 +6,7 @@ namespace WebApplication2.Domain.Models
     public class Currency
     {
         public int Currency_id { get; set; }
-        public string Currency_name { get; set; }
-
-        // Навигационное свойство
-        public ICollection<Rundown> Rundowns { get; set; }
+        public required string Currency_name { get; set; }
+        public ICollection<Rundown> Rundowns { get; set; } = [];
     }
 }

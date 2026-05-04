@@ -8,10 +8,12 @@ using WebApplication2.Domain.Interfaces;
 using WebApplication2.Infrastructure.Data;
 using WebApplication2.Infrastructure.Repositories;
 using WebApplication2.Infrastructure.Services;
+using WebApplication2.Infrastructure.Clients;
+using WebApplication2.Infrastructure.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Настройка JWT аутентификации
+// 1. JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -23,97 +25,66 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            // Добавили ! после ["Jwt:Key"]
-            IssuerSigningKey = new SymmetricSecurityKey(
-    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
 
-// 2. Регистрация сервисов и репозиториев
+// 2. Регистрация слоев
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICurrencyRepository, CurrencyRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<UserRepository>(); // Твой репозиторий для Auth
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
-// 3. Настройка Swagger для JWT
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+// 3. Клиент для внешнего API (BankRuClient)
+builder.Services.AddHttpClient<ICurrencyApiClient, BankRuClient>();
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Авторизация. Введите 'Bearer {токен}'",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
-
-// 4. Логирование и БД
-builder.Logging.AddConsole();
+// 4. БД и Swagger
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 5. HttpClient (для Quartz)
-builder.Services.AddHttpClient();
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c => {
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Введите 'Bearer {токен}'",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        { new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }, Array.Empty<string>() }
+    });
+});
 
-// 6. Настройка Quartz.NET
+// 5. Quartz
 builder.Services.AddQuartz(q =>
 {
     var jobKey = new JobKey("CurrencyUpdateJob");
     q.AddJob<CurrencyUpdateJob>(opts => opts.WithIdentity(jobKey));
-
     q.AddTrigger(opts => opts
         .ForJob(jobKey)
         .WithIdentity("CurrencyUpdateJob-trigger")
-        .WithSimpleSchedule(x => x
-            .WithIntervalInHours(1) // Обновление раз в час
-            .RepeatForever()));
+        .WithSimpleSchedule(x => x.WithIntervalInHours(1).RepeatForever()));
 });
-
-// Добавляем Quartz как фоновую службу
 builder.Services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
-// 7. Контроллеры
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-// Настройка Pipeline (Middlewares)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthentication(); // Сначала КТО ты
-app.UseAuthorization();  // Потом ЧТО тебе можно
-
-app.MapControllers();
-
-// Автоматическое применение миграций при старте (удобно для разработки)
+// Авто-миграции
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.Migrate();
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 app.Run();

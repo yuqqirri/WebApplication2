@@ -1,82 +1,68 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+﻿using System.Security.Cryptography;
+using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using WebApplication2.Domain.Interfaces;
+using Microsoft.IdentityModel.Tokens;
 using WebApplication2.Domain.Models;
 using WebApplication2.Domain.Models.DTO;
-using WebApplication2.Infrastructure.Data;
+using WebApplication2.Domain.Models.Response;
+using WebApplication2.Domain.Interfaces;
 
-namespace WebApplication2.Infrastructure.Services
+namespace WebApplication2.Infrastructure.Services;
+
+public class AuthService(IUserRepository userRepository, IConfiguration configuration) : IAuthService
 {
-    public class AuthService : IAuthService
+    public async Task<AuthResponse?> LoginAsync(LoginModel request)
     {
-        private readonly ApplicationDbContext _context; // вынести в отдельный репозиторий Auth
-        private readonly IConfiguration _configuration;
+        var user = await userRepository.GetUserAsync(request);
+        if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
+            return null;
 
-        public AuthService(ApplicationDbContext context, IConfiguration configuration)
-        {
-            _context = context;
-            _configuration = configuration;
-        }
-
-        public async Task<AuthResponse?> LoginAsync(LoginRequest request)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-            if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
-                return null;
-
-            var token = GenerateJwtToken(user);
-            return new AuthResponse(token, user.Username);
-        }
-
-        public async Task<bool> RegisterAsync(RegisterRequest request)
-        {
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-                return false;
-
-            var user = new User
-            {
-                Username = request.Username,
-                PasswordHash = HashPassword(request.Password)
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        // --- Вспомогательные методы (логика) ---
-
-        private string GenerateJwtToken(User user)
-        {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[] {
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            var token = new JwtSecurityToken(
-                _configuration["Jwt:Issuer"],
-                _configuration["Jwt:Audience"],
-                claims,
-                expires: DateTime.Now.AddHours(1),
-                signingCredentials: credentials);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        private static string HashPassword(string password)
-        {
-            var bytes = Encoding.UTF8.GetBytes(password);
-            var hash = System.Security.Cryptography.SHA256.HashData(bytes);
-            return Convert.ToBase64String(hash);
-        }
-
-        private bool VerifyPassword(string password, string storedHash) => HashPassword(password) == storedHash;
+        var token = GenerateJwtToken(user);
+        return new AuthResponse(token, user.Username);
     }
+
+    public async Task<bool> RegisterAsync(RegisterModel request)
+    {
+
+        var checkRequest = new LoginModel(request.Username, string.Empty);
+        if (await userRepository.GetUserAsync(checkRequest) != null)
+            return false;
+
+        var user = new User
+        {
+            Username = request.Username,
+            PasswordHash = HashPassword(request.Password)
+        };
+
+        await userRepository.AddUserAsync(user);
+        await userRepository.SaveChangesAsync();
+        return true;
+    }
+
+    private string GenerateJwtToken(User user)
+    {
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[] {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            configuration["Jwt:Issuer"], configuration["Jwt:Audience"],
+            claims, expires: DateTime.Now.AddHours(1), signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static string HashPassword(string password)
+    {
+        var bytes = Encoding.UTF8.GetBytes(password);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToBase64String(hash);
+    }
+
+    private static bool VerifyPassword(string password, string storedHash) => HashPassword(password) == storedHash;
 }
