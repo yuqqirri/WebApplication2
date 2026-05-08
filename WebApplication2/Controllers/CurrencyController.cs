@@ -1,50 +1,36 @@
-﻿// Controllers/CurrencyController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication2.Domain.Models;
-using WebApplication2.Infrastructure.Data;
+using WebApplication2.Domain.Interfaces; // Используем интерфейсы
 
 namespace WebApplication2.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class CurrencyController : ControllerBase
+    // Основной конструктор с сервисом
+    public class CurrencyController(ICurrencyService currencyService) : ControllerBase
     {
-        private readonly ApplicationDbContext _context; // вынести в отдельный репозиторий Currency
-
-        public CurrencyController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-        // POST: api/currency
         [HttpPost]
-        public async Task<ActionResult<Currency>> PostCurrency(Currency currency)
+        public async Task<ActionResult<Currency>> PostCurrency([FromBody] Currency currency)
         {
-            if (currency == null || string.IsNullOrWhiteSpace(currency.Currency_name))
+            if (string.IsNullOrWhiteSpace(currency.Currency_name))
             {
                 return BadRequest("Currency name is required.");
             }
 
-            _context.Currencies.Add(currency);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetCurrency), new { id = currency.Currency_id }, currency);
+            // Вся работа с базой теперь внутри сервиса
+            var created = await currencyService.CreateCurrencyAsync(currency);
+            return CreatedAtAction(nameof(GetCurrency), new { id = created.Currency_id }, created);
         }
 
-        // Метод для получения валюты (если нужно)
         [HttpGet("{id}")]
         public async Task<ActionResult<Currency>> GetCurrency(int id)
         {
-            var currency = await _context.Currencies.FindAsync(id);
+            var currency = await currencyService.GetCurrencyAsync(id);
+            if (currency == null) return NotFound();
 
-            if (currency == null)
-            {
-                return NotFound();
-            }
-
-            return currency;
+            return Ok(currency);
         }
     }
 }

@@ -1,50 +1,34 @@
-﻿// Controllers/RundownController.cs
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication2.Domain.Models;
-using WebApplication2.Infrastructure.Data;
+using WebApplication2.Domain.Interfaces;
 
 namespace WebApplication2.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class RundownController : ControllerBase
+    public class RundownController(ICurrencyService currencyService) : ControllerBase
     {
-        private readonly ApplicationDbContext _context; // Вынести в отдельный репозиторий
-
-        public RundownController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-        // POST: api/rundown
         [HttpPost]
-        public async Task<ActionResult<Rundown>> PostRundown(Rundown rundown)
+        public async Task<ActionResult<Rundown>> PostRundown([FromBody] Rundown rundown)
         {
-            if (rundown == null || rundown.Rundown_value <= 0)
+            if (rundown.Rundown_value <= 0)
             {
                 return BadRequest("Rundown value must be greater than zero.");
             }
 
-            _context.Rundowns.Add(rundown);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetRundown), new { id = rundown.Rundown_id }, rundown);
+            var created = await currencyService.CreateRundownAsync(rundown);
+            return CreatedAtAction(nameof(GetRundown), new { id = created.Rundown_id }, created);
         }
 
-        // Метод для получения сводки (если нужно)
         [HttpGet("{id}")]
         public async Task<ActionResult<Rundown>> GetRundown(int id)
         {
-            var rundown = await _context.Rundowns.FindAsync(id);
+            var rundown = await currencyService.GetRundownAsync(id);
+            if (rundown == null) return NotFound();
 
-            if (rundown == null)
-            {
-                return NotFound();
-            }
-
-            return rundown;
+            return Ok(rundown);
         }
     }
 }

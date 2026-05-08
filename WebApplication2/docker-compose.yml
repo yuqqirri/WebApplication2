@@ -1,5 +1,20 @@
 version: '3.8'
 services:
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: currency_app
+    restart: always
+    ports:
+      - "8080:8080" # Приложение будет доступно на http://localhost:8080
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=currency_exchange;Username=yuqqirri;Password=1235
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - db
+
   db:
     image: postgres:latest
     container_name: currency_db
@@ -11,7 +26,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pg_data:/var/lib/postgresql
+      - pg_data:/var/lib/postgresql/data
+
 
   pgadmin:
     image: dpage/pgadmin4
@@ -20,7 +36,9 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8080:80"
+      - "5050:80"
+    depends_on:
+      - db
 
 volumes:
   pg_data:
