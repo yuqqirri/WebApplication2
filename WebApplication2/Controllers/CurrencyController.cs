@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication2.Domain.Models;
-using WebApplication2.Domain.Interfaces; // Используем интерфейсы
+using WebApplication2.Domain.Interfaces;
 
 namespace WebApplication2.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    // Основной конструктор с сервисом
+
     public class CurrencyController(ICurrencyService currencyService) : ControllerBase
     {
         [HttpPost]
@@ -19,7 +19,7 @@ namespace WebApplication2.Controllers
                 return BadRequest("Currency name is required.");
             }
 
-            // Вся работа с базой теперь внутри сервиса
+
             var created = await currencyService.CreateCurrencyAsync(currency);
             return CreatedAtAction(nameof(GetCurrency), new { id = created.Currency_id }, created);
         }

@@ -13,7 +13,7 @@ using WebApplication2.Infrastructure.Jobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. JWT
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -29,16 +29,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// 2. Регистрация слоев
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICurrencyRepository, CurrencyRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 
-// 3. Клиент для внешнего API (BankRuClient)
+
 builder.Services.AddHttpClient<ICurrencyApiClient, BankRuClient>();
 
-// 4. БД и Swagger
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -57,7 +55,7 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
-// 5. Quartz
+
 builder.Services.AddQuartz(q =>
 {
     var jobKey = new JobKey("CurrencyUpdateJob");
@@ -77,7 +75,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Авто-миграции
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-[Authorize] // Требует авторизацию для всех методов
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SecureController : ControllerBase

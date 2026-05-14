@@ -1,6 +1,6 @@
 version: '3.8'
-services:
 
+services:
   web:
     build:
       context: .
@@ -8,10 +8,12 @@ services:
     container_name: currency_app
     restart: always
     ports:
-      - "8080:8080" # ѕриложение будет доступно на http://localhost:8080
+      - "8080:8080" # Swagger будет доступен на http://localhost:8080/swagger
     environment:
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=currency_exchange;Username=yuqqirri;Password=1235
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=currency_exchange;Username=yuqqirri;Password=1235
     depends_on:
       - db
 
@@ -28,7 +30,6 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
-
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin_manage
@@ -36,7 +37,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "5050:80"
+      - "5050:80" # ƒоступ к базе через браузер: http://localhost:5050
     depends_on:
       - db
 
