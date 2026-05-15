@@ -12,7 +12,12 @@ public class CurrencyService(
     public async Task UpdateCurrenciesAsync(CancellationToken ct)
     {
         var data = await apiClient.GetRatesFromBankAsync(ct);
-        if (data == null) return;
+        if (data == null || data.Valute == null)
+        {
+            logger.LogWarning("Данные от банка не получены или пусты.");
+            return;
+        }
+
 
         var existingNames = await repository.GetExistingCurrencyNamesAsync(ct);
         var newCurrencies = data.Valute.Keys
@@ -23,8 +28,36 @@ public class CurrencyService(
         if (newCurrencies.Count > 0)
         {
             await repository.AddCurrenciesAsync(newCurrencies, ct);
-            logger.LogInformation("Добавлено {Count} новых валют", newCurrencies.Count);
+            logger.LogInformation("Добавлено {Count} новых валют в справочник", newCurrencies.Count);
         }
+
+        var allCurrencies = await repository.GetAllCurrenciesAsync(ct);
+        var updateDate = DateTime.UtcNow;
+
+
+        foreach (var entry in data.Valute)
+        {
+            var currencyCode = entry.Key; 
+            var valuteInfo = entry.Value; 
+
+            var currency = allCurrencies.FirstOrDefault(c => c.Currency_name == currencyCode);
+
+            if (currency != null)
+            {
+                var newRundown = new Rundown
+                {
+                    Currency_id = currency.Currency_id,
+                    Rundown_value = valuteInfo.Value, 
+                    Rundown_date = updateDate
+                };
+
+                await repository.AddRundownAsync(newRundown);
+            }
+        }
+
+
+        await repository.SaveChangesAsync();
+        logger.LogInformation("Таблица Rundowns успешно обновлена. Дата: {Date}", updateDate);
     }
 
     public async Task<Currency> CreateCurrencyAsync(Currency currency)
@@ -44,7 +77,6 @@ public class CurrencyService(
     }
 
     public async Task<Rundown?> GetRundownAsync(int id) => await repository.GetRundownByIdAsync(id);
-
 
     public async Task<RateResponse?> GetLatestRateAsync(LatestRateRequest request)
     {
@@ -70,7 +102,6 @@ public class CurrencyService(
             logger.LogWarning("Недостаточно данных для расчета курса {Target}", request.Target);
             return null;
         }
-
 
         return ((current.Rundown_value - past.Rundown_value) / past.Rundown_value) * 100;
     }

@@ -10,6 +10,9 @@ public class CurrencyRepository(ApplicationDbContext context) : ICurrencyReposit
     public async Task<List<string>> GetExistingCurrencyNamesAsync(CancellationToken ct) =>
         await context.Currencies.Select(c => c.Currency_name).ToListAsync(ct);
 
+    public async Task<List<Currency>> GetAllCurrenciesAsync(CancellationToken ct) =>
+        await context.Currencies.ToListAsync(ct);
+
     public async Task AddCurrenciesAsync(List<Currency> currencies, CancellationToken ct)
     {
         await context.Currencies.AddRangeAsync(currencies, ct);
@@ -22,7 +25,6 @@ public class CurrencyRepository(ApplicationDbContext context) : ICurrencyReposit
     public async Task<Rundown?> GetRundownByIdAsync(int id) => await context.Rundowns.FindAsync(id);
     public async Task SaveChangesAsync() => await context.SaveChangesAsync();
 
-    // Реализация новых методов
     public async Task<Rundown?> GetLatestRundownAsync(string currencyName)
     {
         return await context.Rundowns
@@ -45,7 +47,6 @@ public class CurrencyRepository(ApplicationDbContext context) : ICurrencyReposit
 
     public async Task<Rundown?> GetRundownByDateAsync(string currencyName, DateTime date)
     {
-
         return await context.Rundowns
             .Include(r => r.Currency)
             .Where(r => r.Currency.Currency_name == currencyName && r.Rundown_date.Date == date.Date)
